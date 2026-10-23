@@ -1,0 +1,1159 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>BALAP JUWANGI - Edisi Lapangan Gebyok</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Bangers&family=Russo+One&family=Plus+Jakarta+Sans:wght@600;800;900&display=swap');
+    
+    .font-ninja { font-family: 'Bangers', cursive, sans-serif; letter-spacing: 1.5px; }
+    .font-hud { font-family: 'Russo One', sans-serif; }
+    .font-body { font-family: 'Plus Jakarta Sans', sans-serif; }
+
+    #track-viewport {
+      position: relative;
+      overflow: hidden;
+      background: #143814;
+    }
+
+    @keyframes scrollTurf {
+      0% { background-position-x: 0px; }
+      100% { background-position-x: -360px; }
+    }
+
+    /* Jalur lebih lega (tinggi 84px) */
+    .lane {
+      position: relative;
+      height: 84px;
+      border-bottom: 2px dashed rgba(255, 255, 255, 0.22);
+      background-image: repeating-linear-gradient(
+        90deg,
+        rgba(34, 102, 34, 0.85) 0px,
+        rgba(34, 102, 34, 0.85) 45px,
+        rgba(24, 80, 24, 0.95) 45px,
+        rgba(24, 80, 24, 0.95) 90px
+      );
+      background-size: 360px 100%;
+    }
+
+    .lane-moving {
+      animation: scrollTurf 0.85s linear infinite;
+    }
+
+    .lane-moving-slow {
+      animation: scrollTurf 3.5s linear infinite;
+    }
+
+    /* Runner node & rank badge */
+    .runner-node {
+      position: absolute;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 90px;
+      height: 80px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      pointer-events: none;
+      z-index: 30;
+      transition: left 0.08s linear;
+    }
+
+    .runner-img {
+      width: 64px;
+      height: 64px;
+      object-fit: contain;
+      filter: drop-shadow(0 4px 6px rgba(0,0,0,0.7));
+    }
+
+    /* Badge ranking dinamis di atas kepala */
+    .rank-badge {
+      font-family: 'Russo One', sans-serif;
+      font-size: 9px;
+      line-height: 1;
+      padding: 1px 5px;
+      border-radius: 9999px;
+      letter-spacing: 0.5px;
+      transition: all 0.2s ease;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.6);
+    }
+    .rank-1 { background: #eab308; color: #000; border: 1px solid #fef08a; transform: scale(1.15); }
+    .rank-2 { background: #94a3b8; color: #000; border: 1px solid #f1f5f9; }
+    .rank-3 { background: #b45309; color: #fff; border: 1px solid #fde68a; }
+    .rank-other { background: rgba(15, 23, 42, 0.85); color: #cbd5e1; border: 1px solid rgba(255,255,255,0.2); }
+
+    /* Rintangan */
+    .obs-node {
+      position: absolute;
+      top: 50%;
+      transform: translate(-50%, -50%);
+      z-index: 20;
+      pointer-events: none;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-width: 60px;
+    }
+
+    .obs-img {
+      width: 52px;
+      height: 52px;
+      object-fit: contain;
+      filter: drop-shadow(0 4px 6px rgba(0,0,0,0.8));
+      display: block !important;
+    }
+
+    /* Efek Stumble */
+    @keyframes hitShake {
+      0% { transform: translateY(-50%) rotate(0deg) scale(1); }
+      25% { transform: translateY(-68%) rotate(-18deg) scale(0.9); }
+      50% { transform: translateY(-38%) rotate(15deg) scale(1.05); }
+      75% { transform: translateY(-58%) rotate(-8deg) scale(0.95); }
+      100% { transform: translateY(-50%) rotate(0deg) scale(1); }
+    }
+    .stumbled {
+      animation: hitShake 0.9s cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
+    }
+
+    /* Efek Sprint Aura */
+    @keyframes surgeGlow {
+      0% { filter: drop-shadow(0 0 5px #facc15) drop-shadow(0 0 10px #f97316); }
+      50% { filter: drop-shadow(0 0 14px #38bdf8) drop-shadow(0 0 20px #2563eb); }
+      100% { filter: drop-shadow(0 0 5px #facc15) drop-shadow(0 0 10px #f97316); }
+    }
+    .surging img {
+      animation: surgeGlow 0.4s infinite alternate;
+    }
+
+    /* Garis Finish */
+    .finish-gate {
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      width: 28px;
+      background: repeating-linear-gradient(45deg, #ef4444, #ef4444 14px, #ffffff 14px, #ffffff 28px);
+      box-shadow: 0 0 24px rgba(239, 68, 68, 0.8), -6px 0 12px rgba(0,0,0,0.6);
+      z-index: 25;
+    }
+
+    /* Banner Slow-Motion Ticker */
+    @keyframes pulseSlow {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.75; transform: scale(1.05); }
+    }
+    .slow-mo-badge {
+      animation: pulseSlow 0.6s infinite ease-in-out;
+    }
+
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-thumb { background: #475569; border-radius: 4px; }
+    ::-webkit-scrollbar-track { background: #0f172a; }
+  </style>
+</head>
+<body class="bg-slate-950 text-slate-100 font-body select-none overflow-x-hidden min-h-screen flex flex-col justify-between">
+
+  <!-- HEADER UTAMA -->
+  <header class="bg-gradient-to-r from-red-950 via-slate-900 to-amber-950 border-b border-amber-600/40 px-4 py-2 flex flex-wrap items-center justify-between shadow-xl gap-2 z-40">
+    <div class="flex items-center gap-3">
+      <div class="bg-amber-500 text-slate-950 p-1.5 rounded-lg font-ninja text-xl leading-none shadow-md shadow-amber-500/30">BJ</div>
+      <div>
+        <h1 class="text-xl md:text-2xl font-ninja tracking-wider text-amber-400 drop-shadow flex items-center gap-2">
+          BALAP JUWANGI <span class="text-xs font-hud bg-red-600 text-white px-2 py-0.5 rounded-full uppercase tracking-normal">Lapangan Gebyok</span>
+        </h1>
+        <p class="text-xs text-slate-300 font-hud">Undian Desa Ninja Interaktif</p>
+      </div>
+    </div>
+
+    <!-- PANEL PUTARAN & HADIAH -->
+    <div class="flex items-center gap-3 bg-black/40 border border-slate-700/60 rounded-xl px-3 py-1.5">
+      <div class="text-right">
+        <div class="text-[10px] text-amber-400 uppercase tracking-widest font-hud">Ronde Keaktifan</div>
+        <div id="round-indicator" class="text-sm font-hud text-white">Ronde 1 (Sisa 9 Desa)</div>
+      </div>
+      <div class="h-7 w-px bg-slate-700"></div>
+      <div class="text-left">
+        <div class="text-[10px] text-emerald-400 uppercase tracking-widest font-hud">Hadiah Diperebutkan</div>
+        <input id="input-hadiah" type="text" value="Hadiah Utama (Door Prize 1)" class="bg-slate-800 text-emerald-300 font-hud text-xs px-2 py-1 rounded border border-emerald-500/40 focus:outline-none focus:ring-1 focus:ring-emerald-400 w-44 md:w-56" />
+      </div>
+    </div>
+
+    <!-- TOMBOL MENU -->
+    <div class="flex items-center gap-2 flex-wrap">
+      <button onclick="openModal('modal-characters')" class="bg-slate-800 hover:bg-slate-700 text-amber-300 border border-amber-500/40 px-2.5 py-1.5 rounded-lg text-xs font-hud flex items-center gap-1.5 transition">
+        <span>✏️</span> Edit Nama & GIF Desa
+      </button>
+      <button onclick="openModal('modal-obstacles')" class="bg-slate-800 hover:bg-slate-700 text-orange-400 border border-orange-500/40 px-2.5 py-1.5 rounded-lg text-xs font-hud flex items-center gap-1.5 transition">
+        <span>🚧</span> Atur 3 Rintangan (GIF)
+      </button>
+      <button onclick="openModal('modal-audio')" class="bg-slate-800 hover:bg-slate-700 text-cyan-300 border border-cyan-500/40 px-2.5 py-1.5 rounded-lg text-xs font-hud flex items-center gap-1.5 transition">
+        <span>🔊</span> Audio & Musik
+      </button>
+      <button onclick="toggleFullScreen()" class="bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-600 px-2.5 py-1.5 rounded-lg text-xs font-hud transition">
+        ⛶ Layar Penuh
+      </button>
+    </div>
+  </header>
+
+  <!-- ARENA BALAPAN -->
+  <main class="relative flex-1 flex flex-col justify-center bg-slate-900 overflow-hidden">
+    
+    <!-- PATUNG KUDA IKONIK LAPANGAN GEBYOK -->
+    <div class="w-full bg-slate-950/85 border-b border-amber-900/40 py-1.5 px-4 flex items-center justify-between z-10">
+      <div class="flex items-center gap-2 text-amber-300 font-ninja text-sm tracking-wider">
+        <span>🐎</span>
+        <span>MONUMEN PATUNG KUDA LAPANGAN GEBYOK</span>
+      </div>
+      <div id="slow-mo-indicator" class="hidden slow-mo-badge bg-red-600/90 text-white font-hud text-xs px-2.5 py-0.5 rounded-full border border-red-300 shadow">
+        ⚡ SLOW MOTION FINISH!
+      </div>
+      <div class="flex items-center gap-2 text-[11px] font-hud text-slate-400">
+        <span class="text-emerald-400">Start (5%)</span> ➔ 
+        <span class="text-orange-400">R1 (28%)</span> ➔ 
+        <span class="text-orange-400">R2 (55%)</span> ➔ 
+        <span class="text-orange-400">R3 (78%)</span> ➔ 
+        <span class="text-red-400 font-bold">Finish (94%)</span>
+      </div>
+    </div>
+
+    <!-- VIEWPORT TRACK LINTASAN -->
+    <div id="track-viewport" class="w-full relative shadow-inner border-y border-amber-900/60">
+      <div id="track-lanes-container" class="relative"></div>
+      
+      <!-- GARIS FINISH DI 94% -->
+      <div id="finish-line" class="finish-gate" style="left: 94%;">
+        <div class="absolute -top-6 -left-4 bg-red-600 text-white font-ninja text-[11px] px-2 py-0.5 rounded shadow border border-white">FINISH</div>
+      </div>
+    </div>
+
+    <!-- TICKER ANNOUNCER -->
+    <div class="bg-black/90 border-t border-slate-800 px-4 py-1.5 flex justify-between items-center text-xs z-10">
+      <div id="live-announcer" class="text-amber-300 font-hud truncate">Siap di garis start Lapangan Gebyok. Tekan Mulai Balap!</div>
+      <div id="leader-text" class="text-[11px] text-slate-300 font-hud hidden sm:block">Memimpin: -</div>
+    </div>
+  </main>
+
+  <!-- FOOTER KONTROL PANITIA -->
+  <footer class="bg-slate-950 border-t border-slate-800 px-4 py-3 z-40">
+    <div class="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-3">
+      
+      <div class="flex items-center gap-2 flex-wrap">
+        <button id="btn-start" onclick="handleStartRace()" class="bg-gradient-to-r from-red-600 to-amber-600 hover:from-red-500 hover:to-amber-500 text-white font-ninja text-lg px-6 py-2 rounded-xl shadow-lg shadow-red-700/40 border border-amber-400/50 transition transform active:scale-95">
+          🏁 MULAI BALAP
+        </button>
+        <button id="btn-pause" onclick="togglePauseRace()" disabled class="bg-slate-800 hover:bg-slate-700 text-slate-300 font-hud text-xs px-3.5 py-2.5 rounded-lg border border-slate-700 disabled:opacity-40 transition">
+          ⏸ Jeda
+        </button>
+        <button id="btn-restart" onclick="resetCurrentRound()" class="bg-slate-800 hover:bg-slate-700 text-amber-400 font-hud text-xs px-3.5 py-2.5 rounded-lg border border-amber-500/30 transition">
+          🔄 Ulang Ronde
+        </button>
+        <div class="h-6 w-px bg-slate-800 mx-1"></div>
+        <div class="flex items-center gap-1.5 text-xs text-slate-300 font-hud">
+          <span>Durasi:</span>
+          <select id="race-duration" class="bg-slate-900 border border-slate-700 rounded px-2 py-1 text-amber-300 focus:outline-none">
+            <option value="20">20 Detik (Cepat)</option>
+            <option value="35" selected>35 Detik (Seru & Saling Salip)</option>
+            <option value="50">50 Detik (Penuh Drama)</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-3">
+        <div class="text-right">
+          <div class="text-[10px] uppercase tracking-wider text-slate-400 font-hud">Pemenang Terundi</div>
+          <div id="winner-count" class="text-xs font-hud text-amber-400">0 / 9 Desa Selesai</div>
+        </div>
+        <button onclick="openModal('modal-history')" class="bg-slate-800 hover:bg-slate-700 text-emerald-400 border border-emerald-500/40 px-3 py-2 rounded-lg text-xs font-hud flex items-center gap-1.5 transition">
+          <span>📜</span> Rekap Juara
+        </button>
+        <button onclick="resetFullTournament()" class="bg-red-950/60 hover:bg-red-900 text-red-300 border border-red-700/50 px-2.5 py-2 rounded-lg text-xs font-hud transition" title="Reset Semua Ronde">
+          Reset Total
+        </button>
+      </div>
+
+    </div>
+  </footer>
+
+  <!-- ==================== MODAL EDIT DESA & GIF ==================== -->
+  <div id="modal-characters" class="fixed inset-0 bg-black/85 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-slate-900 border border-amber-600/50 rounded-2xl w-full max-w-4xl max-h-[90vh] flex flex-col shadow-2xl overflow-hidden">
+      <div class="px-5 py-3 border-b border-slate-800 flex justify-between items-center bg-slate-950">
+        <h2 class="text-lg font-ninja tracking-wider text-amber-400 flex items-center gap-2">
+          <span>✏️</span> Atur Nama Desa & Karakter GIF Ninja
+        </h2>
+        <button onclick="closeModal('modal-characters')" class="text-slate-400 hover:text-white font-bold text-lg">&times;</button>
+      </div>
+      <div class="p-5 overflow-y-auto space-y-3 flex-1 text-xs" id="village-edit-list"></div>
+      <div class="px-5 py-3 border-t border-slate-800 bg-slate-950 flex justify-between items-center">
+        <button onclick="resetVillagesToDefault()" class="text-red-400 hover:text-red-300 font-hud text-xs underline">
+          Kembalikan ke Bawaan
+        </button>
+        <button onclick="closeModal('modal-characters')" class="bg-amber-600 hover:bg-amber-500 text-slate-950 font-hud px-4 py-2 rounded-lg font-bold">
+          Simpan & Tutup
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== MODAL ATUR 3 RINTANGAN (GIF) ==================== -->
+  <div id="modal-obstacles" class="fixed inset-0 bg-black/85 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-slate-900 border border-orange-500/50 rounded-2xl w-full max-w-3xl max-h-[90vh] flex flex-col shadow-2xl overflow-hidden">
+      <div class="px-5 py-3 border-b border-slate-800 flex justify-between items-center bg-slate-950">
+        <h2 class="text-lg font-ninja tracking-wider text-orange-400 flex items-center gap-2">
+          <span>🚧</span> Atur 3 Rintangan Lapangan Gebyok (GIF Kustom)
+        </h2>
+        <button onclick="closeModal('modal-obstacles')" class="text-slate-400 hover:text-white font-bold text-lg">&times;</button>
+      </div>
+      <div class="p-5 overflow-y-auto space-y-4 flex-1 text-xs" id="obstacle-edit-list"></div>
+      <div class="px-5 py-3 border-t border-slate-800 bg-slate-950 flex justify-between items-center">
+        <button onclick="resetObstaclesToDefault()" class="text-red-400 hover:text-red-300 font-hud text-xs underline">
+          Kembalikan ke Rintangan Asli
+        </button>
+        <button onclick="closeModal('modal-obstacles')" class="bg-orange-600 hover:bg-orange-500 text-slate-950 font-hud px-4 py-2 rounded-lg font-bold">
+          Simpan Rintangan
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== MODAL AUDIO & MUSIK ==================== -->
+  <div id="modal-audio" class="fixed inset-0 bg-black/85 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-slate-900 border border-cyan-500/50 rounded-2xl w-full max-w-md shadow-2xl overflow-hidden">
+      <div class="px-5 py-3 border-b border-slate-800 flex justify-between items-center bg-slate-950">
+        <h2 class="text-lg font-ninja tracking-wider text-cyan-400 flex items-center gap-2">
+          <span>🔊</span> Pengaturan Musik & Audio
+        </h2>
+        <button onclick="closeModal('modal-audio')" class="text-slate-400 hover:text-white font-bold text-lg">&times;</button>
+      </div>
+      <div class="p-5 space-y-4 text-xs">
+        
+        <div class="bg-slate-800/60 p-3 rounded-xl border border-slate-700/60 space-y-2">
+          <div class="flex justify-between items-center">
+            <span class="font-hud text-slate-200">Musik Taiko Balapan (BGM)</span>
+            <input type="checkbox" id="bgm-toggle" checked onchange="handleBgmToggle(this.checked)" class="w-4 h-4 accent-cyan-500 cursor-pointer" />
+          </div>
+          <div class="flex items-center gap-3">
+            <span class="text-slate-400">Vol:</span>
+            <input type="range" id="bgm-volume" min="0" max="1" step="0.05" value="0.5" oninput="handleBgmVolume(this.value)" class="w-full accent-cyan-400 cursor-pointer" />
+            <span id="bgm-vol-label" class="text-cyan-300 font-mono w-8">50%</span>
+          </div>
+        </div>
+
+        <div class="bg-slate-800/60 p-3 rounded-xl border border-slate-700/60 space-y-2">
+          <div class="flex justify-between items-center">
+            <span class="font-hud text-slate-200">Efek Suara (SFX Hambatan & Jurus)</span>
+            <input type="checkbox" id="sfx-toggle" checked onchange="handleSfxToggle(this.checked)" class="w-4 h-4 accent-amber-500 cursor-pointer" />
+          </div>
+          <div class="flex items-center gap-3">
+            <span class="text-slate-400">Vol:</span>
+            <input type="range" id="sfx-volume" min="0" max="1" step="0.05" value="0.8" oninput="handleSfxVolume(this.value)" class="w-full accent-amber-400 cursor-pointer" />
+            <span id="sfx-vol-label" class="text-amber-300 font-mono w-8">80%</span>
+          </div>
+        </div>
+
+        <div class="flex gap-2">
+          <button onclick="playTestBgm()" class="flex-1 bg-cyan-900/40 hover:bg-cyan-800/60 text-cyan-200 border border-cyan-600/40 py-2 rounded-lg font-hud text-center">
+            ▶ Tes Taiko
+          </button>
+          <button onclick="playSampleSfx()" class="flex-1 bg-amber-900/40 hover:bg-amber-800/60 text-amber-200 border border-amber-600/40 py-2 rounded-lg font-hud text-center">
+            ⚡ Tes Jurus
+          </button>
+        </div>
+
+      </div>
+      <div class="px-5 py-3 border-t border-slate-800 bg-slate-950 text-right">
+        <button onclick="closeModal('modal-audio')" class="bg-cyan-600 hover:bg-cyan-500 text-slate-950 font-hud px-4 py-1.5 rounded-lg font-bold">
+          Selesai
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== MODAL REKAP PEMENANG ==================== -->
+  <div id="modal-history" class="fixed inset-0 bg-black/85 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-slate-900 border border-emerald-500/50 rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden">
+      <div class="px-5 py-3 border-b border-slate-800 flex justify-between items-center bg-slate-950">
+        <h2 class="text-lg font-ninja tracking-wider text-emerald-400 flex items-center gap-2">
+          <span>📜</span> Daftar Pemenang Undian Juwangi
+        </h2>
+        <button onclick="closeModal('modal-history')" class="text-slate-400 hover:text-white font-bold text-lg">&times;</button>
+      </div>
+      <div class="p-5 max-h-[60vh] overflow-y-auto space-y-2 text-xs" id="history-container"></div>
+      <div class="px-5 py-3 border-t border-slate-800 bg-slate-950 flex justify-between items-center">
+        <button onclick="copyWinnersText()" class="bg-slate-800 hover:bg-slate-700 text-emerald-300 font-hud px-3 py-1.5 rounded-lg border border-emerald-500/40">
+          📋 Salin Teks
+        </button>
+        <button onclick="closeModal('modal-history')" class="bg-emerald-600 hover:bg-emerald-500 text-slate-950 font-hud px-4 py-1.5 rounded-lg font-bold">
+          Tutup
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== MODAL JUARA RONDE ==================== -->
+  <div id="modal-winner" class="fixed inset-0 bg-black/90 backdrop-blur-md z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-gradient-to-b from-amber-950 via-slate-900 to-slate-950 border-2 border-amber-500 rounded-3xl w-full max-w-md p-6 text-center shadow-2xl relative">
+      <div class="text-5xl mb-2 animate-bounce">🏆</div>
+      <div class="text-amber-400 font-ninja text-2xl tracking-widest uppercase">Pemenang Ronde Terpilih!</div>
+      <div id="win-prize-badge" class="inline-block bg-emerald-600 text-white font-hud text-xs px-3 py-1 rounded-full my-2">Hadiah Utama</div>
+
+      <div class="my-4 flex flex-col items-center">
+        <img id="win-avatar" src="" alt="Winner GIF" class="w-24 h-24 object-contain filter drop-shadow(0 0 16px #f59e0b)" />
+        <div id="win-village-name" class="font-ninja text-3xl text-amber-300 mt-2 tracking-wide">Desa Pilangrejo</div>
+        <div id="win-ninja-name" class="font-hud text-xs text-slate-400">Perwakilan: Naruto Uzumaki</div>
+      </div>
+
+      <div class="bg-black/50 border border-slate-800 rounded-xl p-3 text-xs text-slate-300 mb-5">
+        Desa ini resmi tercatat sebagai pemenang dan otomatis dikeluarkan untuk ronde perebutan nomor berikutnya.
+      </div>
+
+      <div class="flex gap-2 justify-center">
+        <button id="btn-next-round" onclick="prepareNextRound()" class="bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 text-white font-ninja text-base px-6 py-2.5 rounded-xl shadow-lg shadow-emerald-700/50">
+          Lanjut Ronde Berikutnya ➔
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    /* ==========================================================================
+       DATABASE INDEXEDDB (Bebas Batas 5MB, Support GIF Canva Besar)
+       ========================================================================== */
+    const DB_NAME = 'BalapJuwangiDB_V3';
+    const DB_VERSION = 1;
+    const STORE_NAME = 'assets_store';
+
+    function openDB() {
+      return new Promise((resolve, reject) => {
+        const req = indexedDB.open(DB_NAME, DB_VERSION);
+        req.onupgradeneeded = (e) => {
+          const db = e.target.result;
+          if (!db.objectStoreNames.contains(STORE_NAME)) {
+            db.createObjectStore(STORE_NAME);
+          }
+        };
+        req.onsuccess = () => resolve(req.result);
+        req.onerror = () => reject(req.error);
+      });
+    }
+
+    async function dbSet(key, val) {
+      try {
+        const db = await openDB();
+        return new Promise((resolve, reject) => {
+          const tx = db.transaction(STORE_NAME, 'readwrite');
+          tx.objectStore(STORE_NAME).put(val, key);
+          tx.oncomplete = () => resolve();
+          tx.onerror = () => reject(tx.error);
+        });
+      } catch (e) {
+        console.warn('DB set fallback', e);
+      }
+    }
+
+    async function dbGet(key) {
+      try {
+        const db = await openDB();
+        return new Promise((resolve, reject) => {
+          const tx = db.transaction(STORE_NAME, 'readonly');
+          const req = tx.objectStore(STORE_NAME).get(key);
+          req.onsuccess = () => resolve(req.result);
+          req.onerror = () => reject(req.error);
+        });
+      } catch (e) {
+        return null;
+      }
+    }
+
+    /* DATA DEFAULT */
+    const DEFAULT_VILLAGES = [
+      { id: 'v1', name: 'Pilangrejo', ninja: 'Naruto Uzumaki', gif: 'https://media.tenor.com/71K_mP_e5rQAAAAi/naruto-run.gif' },
+      { id: 'v2', name: 'Cerme', ninja: 'Sasuke Uchiha', gif: 'https://media.tenor.com/2mP9r_wWkR8AAAAi/sasuke-run.gif' },
+      { id: 'v3', name: 'Jerukan', ninja: 'Kakashi Hatake', gif: 'https://media.tenor.com/yFv9_n3qZ60AAAAi/kakashi-running.gif' },
+      { id: 'v4', name: 'Kalimati', ninja: 'Gaara', gif: 'https://media.tenor.com/L79p7qF7-jAAAAAi/gaara-naruto.gif' },
+      { id: 'v5', name: 'Kayen', ninja: 'Rock Lee', gif: 'https://media.tenor.com/4hU8x8x-kKkAAAAi/rock-lee-run.gif' },
+      { id: 'v6', name: 'Krobokan', ninja: 'Shikamaru Nara', gif: 'https://media.tenor.com/5J3E9E9X9qAAAAAi/shikamaru-running.gif' },
+      { id: 'v7', name: 'Ngaren', ninja: 'Neji Hyuga', gif: 'https://media.tenor.com/1mO7K-bHqFwAAAAi/neji-hyuga.gif' },
+      { id: 'v8', name: 'Ngleses', ninja: 'Itachi Uchiha', gif: 'https://media.tenor.com/7gN6s8sM428AAAAi/itachi-akatsuki.gif' },
+      { id: 'v9', name: 'Sambeng', ninja: 'Minato Namikaze', gif: 'https://media.tenor.com/s6W_jQ_gM3gAAAAi/minato-namikaze.gif' }
+    ];
+
+    const DEFAULT_OBSTACLES = [
+      { id: 'obs1', pos: 0.28, name: 'Lumpur Becek Gebyok', delay: 1100, gif: 'https://media.tenor.com/qU393x6v01sAAAAi/water-splash.gif' },
+      { id: 'obs2', pos: 0.55, name: 'Bambu Roboh & Tali', delay: 1000, gif: 'https://media.tenor.com/YwN9m21G1mAAAAAi/wood-breaking.gif' },
+      { id: 'obs3', pos: 0.78, name: 'Semak Peledak Gebyok', delay: 900, gif: 'https://media.tenor.com/c1h5M3x2o3sAAAAi/explosion-naruto.gif' }
+    ];
+
+    let villages = [];
+    let obstacles = [];
+    let activeParticipants = [];
+    let winnersList = [];
+    let currentRound = 1;
+    let isRacing = false;
+    let isPaused = false;
+    let isSlowMotion = false;
+    let raceStartTime = 0;
+    let raceDurationMs = 35000;
+    let animationFrameId = null;
+
+    /* AUDIO SYNTHESIZER */
+    let audioCtx = null;
+    let bgmInterval = null;
+    let isBgmEnabled = true;
+    let isSfxEnabled = true;
+    let bgmVolume = 0.5;
+    let sfxVolume = 0.8;
+
+    function initAudio() {
+      if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      if (audioCtx.state === 'suspended') audioCtx.resume();
+    }
+
+    function playTaiko(freqMul = 1.0) {
+      if (!isBgmEnabled || !audioCtx) return;
+      const now = audioCtx.currentTime;
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(130 * freqMul, now);
+      osc.frequency.exponentialRampToValueAtTime(36, now + 0.14);
+      gain.gain.setValueAtTime(0.7 * bgmVolume, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      osc.start(now);
+      osc.stop(now + 0.15);
+    }
+
+    function startBgm() {
+      if (!isBgmEnabled) return;
+      initAudio();
+      stopBgm();
+      let step = 0;
+      bgmInterval = setInterval(() => {
+        if (!isRacing || isPaused) return;
+        const tempoMul = isSlowMotion ? 0.7 : 1.0;
+        playTaiko(tempoMul);
+        if (step % 2 === 0) setTimeout(() => playTaiko(tempoMul), 120);
+        step++;
+      }, 330);
+    }
+
+    function stopBgm() {
+      if (bgmInterval) {
+        clearInterval(bgmInterval);
+        bgmInterval = null;
+      }
+    }
+
+    function playSfx(type) {
+      if (!isSfxEnabled) return;
+      initAudio();
+      const now = audioCtx.currentTime;
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+
+      if (type === 'hit') {
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(240, now);
+        osc.frequency.linearRampToValueAtTime(60, now + 0.22);
+        gain.gain.setValueAtTime(0.55 * sfxVolume, now);
+        gain.gain.linearRampToValueAtTime(0.01, now + 0.22);
+      } else if (type === 'surge') {
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(420, now);
+        osc.frequency.exponentialRampToValueAtTime(880, now + 0.25);
+        gain.gain.setValueAtTime(0.4 * sfxVolume, now);
+        gain.gain.linearRampToValueAtTime(0.01, now + 0.25);
+      } else if (type === 'slowmo') {
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(180, now);
+        osc.frequency.linearRampToValueAtTime(90, now + 0.5);
+        gain.gain.setValueAtTime(0.6 * sfxVolume, now);
+        gain.gain.linearRampToValueAtTime(0.01, now + 0.5);
+      } else if (type === 'win') {
+        osc.type = 'square';
+        osc.frequency.setValueAtTime(523.25, now);
+        osc.frequency.setValueAtTime(659.25, now + 0.15);
+        osc.frequency.setValueAtTime(783.99, now + 0.3);
+        gain.gain.setValueAtTime(0.4 * sfxVolume, now);
+        gain.gain.linearRampToValueAtTime(0.01, now + 0.6);
+      }
+
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      osc.start(now);
+      osc.stop(now + 0.6);
+    }
+
+    /* LOAD DATA */
+    async function loadAllData() {
+      const storedV = await dbGet('villages');
+      villages = storedV && storedV.length ? storedV : [...DEFAULT_VILLAGES];
+      activeParticipants = [...villages];
+
+      const storedO = await dbGet('obstacles');
+      obstacles = storedO && storedO.length ? storedO : [...DEFAULT_OBSTACLES];
+      
+      renderTrackLanes();
+    }
+
+    async function saveVillages() { await dbSet('villages', villages); }
+    async function saveObstacles() { await dbSet('obstacles', obstacles); }
+
+    /* RENDER TRACK */
+    function renderTrackLanes() {
+      const container = document.getElementById('track-lanes-container');
+      container.innerHTML = '';
+
+      activeParticipants.forEach((v, index) => {
+        const lane = document.createElement('div');
+        lane.className = `lane flex items-center ${isRacing && !isPaused ? (isSlowMotion ? 'lane-moving-slow' : 'lane-moving') : ''}`;
+        lane.id = `lane-${v.id}`;
+
+        // Label Desa di Kiri
+        const label = document.createElement('div');
+        label.className = 'absolute left-2 z-10 bg-black/80 border border-slate-700/80 px-2 py-0.5 rounded text-[11px] font-hud text-slate-200 pointer-events-none flex items-center gap-1.5 shadow';
+        label.innerHTML = `<span class="text-amber-400 font-ninja">#${index+1}</span> <span>${v.name}</span>`;
+        lane.appendChild(label);
+
+        // 3 Rintangan Pasti Muncul
+        obstacles.forEach(obs => {
+          const obsEl = document.createElement('div');
+          obsEl.className = 'obs-node';
+          obsEl.id = `obs-${v.id}-${obs.id}`;
+          obsEl.style.left = `${obs.pos * 100}%`;
+
+          const imgSrc = obs.gif && obs.gif.trim() !== '' ? obs.gif : 'https://media.tenor.com/qU393x6v01sAAAAi/water-splash.gif';
+
+          obsEl.innerHTML = `
+            <img src="${imgSrc}" alt="${obs.name}" class="obs-img" onerror="this.onerror=null; this.src='https://media.tenor.com/qU393x6v01sAAAAi/water-splash.gif';" />
+            <div class="text-[8px] font-hud text-amber-200 bg-black/75 px-1.5 py-0.5 rounded whitespace-nowrap -mt-1 shadow border border-amber-600/30">${obs.name}</div>
+          `;
+          lane.appendChild(obsEl);
+        });
+
+        // Runner Node dengan Rank Badge di atas
+        const runner = document.createElement('div');
+        runner.className = 'runner-node';
+        runner.id = `runner-${v.id}`;
+        runner.style.left = '5%';
+
+        runner.innerHTML = `
+          <div class="flex items-center gap-1 mb-0.5">
+            <span id="rank-badge-${v.id}" class="rank-badge rank-other">#-</span>
+            <div class="bg-black/85 border border-amber-400 text-amber-300 text-[9px] font-ninja px-1 py-0.2 rounded whitespace-nowrap shadow">
+              ${v.name}
+            </div>
+          </div>
+          <img src="${v.gif}" alt="${v.name}" class="runner-img" onerror="this.onerror=null; this.src='https://media.tenor.com/71K_mP_e5rQAAAAi/naruto-run.gif';" />
+        `;
+        lane.appendChild(runner);
+
+        container.appendChild(lane);
+      });
+    }
+
+    /* SISTEM FISIKA SALING MENYALIP & SLOW-MOTION */
+    let runnersState = {};
+
+    function initRunnersState() {
+      runnersState = {};
+      activeParticipants.forEach(v => {
+        runnersState[v.id] = {
+          progress: 0.05,
+          stumbleUntil: 0,
+          hitObstacles: {},
+          lastSurgeTime: 0,
+          isSurging: false,
+          currentMomentum: 1.0,
+          nextMomentumShift: performance.now() + 1000 + Math.random() * 2000
+        };
+      });
+    }
+
+    function setLanesMoving(active, slow = false) {
+      const lanes = document.querySelectorAll('.lane');
+      lanes.forEach(l => {
+        l.classList.remove('lane-moving', 'lane-moving-slow');
+        if (active) {
+          l.classList.add(slow ? 'lane-moving-slow' : 'lane-moving');
+        }
+      });
+    }
+
+    function handleStartRace() {
+      if (isRacing) return;
+      initAudio();
+      isRacing = true;
+      isPaused = false;
+      isSlowMotion = false;
+
+      document.getElementById('slow-mo-indicator').classList.add('hidden');
+      document.getElementById('btn-start').disabled = true;
+      document.getElementById('btn-pause').disabled = false;
+      document.getElementById('race-duration').disabled = true;
+
+      raceDurationMs = parseInt(document.getElementById('race-duration').value) * 1000;
+      initRunnersState();
+      raceStartTime = performance.now();
+      setLanesMoving(true, false);
+      startBgm();
+
+      document.getElementById('live-announcer').textContent = `Balapan Ronde ${currentRound} dimulai! Pertarungan ninja Lapangan Gebyok!`;
+      requestAnimationFrame(gameLoop);
+    }
+
+    function togglePauseRace() {
+      if (!isRacing) return;
+      isPaused = !isPaused;
+      document.getElementById('btn-pause').textContent = isPaused ? '▶ Lanjut' : '⏸ Jeda';
+      document.getElementById('live-announcer').textContent = isPaused ? 'Balapan dijeda panitia.' : 'Balapan dilanjutkan!';
+      setLanesMoving(!isPaused, isSlowMotion);
+      if (!isPaused) requestAnimationFrame(gameLoop);
+    }
+
+    function resetCurrentRound() {
+      isRacing = false;
+      isPaused = false;
+      isSlowMotion = false;
+      stopBgm();
+      setLanesMoving(false);
+      document.getElementById('slow-mo-indicator').classList.add('hidden');
+      if (animationFrameId) cancelAnimationFrame(animationFrameId);
+
+      document.getElementById('btn-start').disabled = false;
+      document.getElementById('btn-pause').disabled = true;
+      document.getElementById('btn-pause').textContent = '⏸ Jeda';
+      document.getElementById('race-duration').disabled = false;
+      document.getElementById('live-announcer').textContent = `Ronde ${currentRound} direset. Siap mengulang.`;
+
+      renderTrackLanes();
+    }
+
+    function gameLoop(now) {
+      if (!isRacing || isPaused) return;
+
+      // Urutkan Pelari untuk Indikator Peringkat 1st - 9th
+      const sortedParticipants = [...activeParticipants].sort((a, b) => {
+        return runnersState[b.id].progress - runnersState[a.id].progress;
+      });
+
+      // Update Tampilan Peringkat Mengambang Real-Time
+      sortedParticipants.forEach((v, rankIdx) => {
+        const badge = document.getElementById(`rank-badge-${v.id}`);
+        if (badge) {
+          const rank = rankIdx + 1;
+          badge.textContent = rank === 1 ? '1st' : rank === 2 ? '2nd' : rank === 3 ? '3rd' : `${rank}th`;
+          badge.className = `rank-badge ${rank === 1 ? 'rank-1' : rank === 2 ? 'rank-2' : rank === 3 ? 'rank-3' : 'rank-other'}`;
+        }
+      });
+
+      const leader = sortedParticipants[0];
+      const maxP = runnersState[leader.id].progress;
+      const minP = runnersState[sortedParticipants[sortedParticipants.length - 1].id].progress;
+      document.getElementById('leader-text').textContent = `Memimpin: ${leader.name} (${Math.round(maxP * 100)}%)`;
+
+      // AKTIVASI SUPER SLOW MOTION DI 5% TERAKHIR (Progress >= 0.89 Menuju Finish 0.94)
+      if (maxP >= 0.89 && !isSlowMotion) {
+        isSlowMotion = true;
+        document.getElementById('slow-mo-indicator').classList.remove('hidden');
+        document.getElementById('live-announcer').textContent = '⚡ DETIK-DETIK TERAKHIR! SALING SALIP DI GARIS FINISH!';
+        setLanesMoving(true, true);
+        playSfx('slowmo');
+      }
+
+      let potentialWinner = null;
+
+      activeParticipants.forEach(v => {
+        const state = runnersState[v.id];
+        const el = document.getElementById(`runner-${v.id}`);
+
+        // Pemulihan Stumble Rintangan
+        if (now > state.stumbleUntil) {
+          el.classList.remove('stumbled');
+          
+          // Deteksi Tabrakan 3 Rintangan (28%, 55%, 78%)
+          obstacles.forEach(obs => {
+            if (!state.hitObstacles[obs.id] && state.progress >= obs.pos && state.progress <= obs.pos + 0.05) {
+              if (Math.random() < 0.78) {
+                state.hitObstacles[obs.id] = true;
+                state.stumbleUntil = now + obs.delay;
+                el.classList.add('stumbled');
+                playSfx('hit');
+                document.getElementById('live-announcer').textContent = `Waduh! ${v.name} menabrak ${obs.name}!`;
+              }
+            }
+          });
+        }
+
+        // Perhitungan Kecepatan dengan Dinamika Salip Menyalip
+        if (now > state.stumbleUntil) {
+          // Ganti Ritme Stamina / Momentum Secara Berkala
+          if (now > state.nextMomentumShift) {
+            state.currentMomentum = 0.85 + Math.random() * 0.45; // 0.85x s/d 1.3x
+            state.nextMomentumShift = now + 1500 + Math.random() * 2500;
+          }
+
+          // Rubber-Banding Dinamis agar Semua Tetap Dalam 1 Layar & Saling Salip
+          let rubberBoost = 1.0;
+          if (state.progress < maxP - 0.06) {
+            rubberBoost = 1.4; // Yang tertinggal ngebut menyalip
+          } else if (state.progress >= maxP && maxP > 0.30) {
+            rubberBoost = 0.85; // Yang di depan staminanya turun sehingga disalip balik
+          }
+
+          // Zona Menjelang Finish (Salip Kritis & Tidak Tertebak)
+          let finishSprint = 1.0;
+          if (state.progress > 0.82) {
+            finishSprint = 0.95 + Math.random() * 0.55;
+          }
+
+          // Surge Jutsu Dadakan
+          if (now - state.lastSurgeTime > 2600 && Math.random() < 0.035) {
+            state.lastSurgeTime = now;
+            state.isSurging = true;
+            el.classList.add('surging');
+            playSfx('surge');
+            setTimeout(() => {
+              state.isSurging = false;
+              if (el) el.classList.remove('surging');
+            }, 750);
+          }
+
+          const surgeMultiplier = state.isSurging ? 1.6 : 1.0;
+          // Efek perlambatan saat Super Slow-Motion aktif (0.28x)
+          const slowMoFactor = isSlowMotion ? 0.28 : 1.0;
+
+          const delta = (0.00034 + Math.random() * 0.00028) * state.currentMomentum * rubberBoost * surgeMultiplier * finishSprint * slowMoFactor;
+          state.progress += delta;
+        }
+
+        el.style.left = `${state.progress * 100}%`;
+
+        // Deteksi Garis Finish di 0.94 (94%)
+        if (state.progress >= 0.94 && !potentialWinner) {
+          potentialWinner = v;
+        }
+      });
+
+      if (potentialWinner) {
+        finishRound(potentialWinner);
+        return;
+      }
+
+      animationFrameId = requestAnimationFrame(gameLoop);
+    }
+
+    function finishRound(winner) {
+      isRacing = false;
+      stopBgm();
+      setLanesMoving(false);
+      document.getElementById('slow-mo-indicator').classList.add('hidden');
+      playSfx('win');
+
+      const prizeName = document.getElementById('input-hadiah').value || `Hadiah Ronde ${currentRound}`;
+      winnersList.push({
+        round: currentRound,
+        village: winner.name,
+        ninja: winner.ninja,
+        prize: prizeName,
+        gif: winner.gif
+      });
+
+      document.getElementById('win-prize-badge').textContent = prizeName;
+      document.getElementById('win-village-name').textContent = winner.name;
+      document.getElementById('win-ninja-name').textContent = `Perwakilan: ${winner.ninja}`;
+      document.getElementById('win-avatar').src = winner.gif;
+      openModal('modal-winner');
+
+      updateWinnerCount();
+      renderHistoryList();
+    }
+
+    function prepareNextRound() {
+      closeModal('modal-winner');
+      
+      const lastWinnerName = winnersList[winnersList.length - 1].village;
+      activeParticipants = activeParticipants.filter(v => v.name !== lastWinnerName);
+
+      if (activeParticipants.length === 0) {
+        alert('Semua desa telah selesai diundi!');
+        return;
+      }
+
+      currentRound++;
+      document.getElementById('round-indicator').textContent = `Ronde ${currentRound} (Sisa ${activeParticipants.length} Desa)`;
+      document.getElementById('input-hadiah').value = `Hadiah Ronde ${currentRound}`;
+      document.getElementById('btn-start').disabled = false;
+      document.getElementById('btn-pause').disabled = true;
+      document.getElementById('race-duration').disabled = false;
+      document.getElementById('live-announcer').textContent = `Pemenang dicatat. Siap memulai Ronde ${currentRound}!`;
+
+      renderTrackLanes();
+    }
+
+    function resetFullTournament() {
+      if (!confirm('Yakin ingin mereset seluruh hasil undian ke awal?')) return;
+      currentRound = 1;
+      winnersList = [];
+      activeParticipants = [...villages];
+      document.getElementById('round-indicator').textContent = `Ronde 1 (Sisa 9 Desa)`;
+      document.getElementById('input-hadiah').value = 'Hadiah Utama (Door Prize 1)';
+      updateWinnerCount();
+      renderHistoryList();
+      resetCurrentRound();
+    }
+
+    function updateWinnerCount() {
+      document.getElementById('winner-count').textContent = `${winnersList.length} / ${villages.length} Desa Selesai`;
+    }
+
+    /* MODAL EDIT RINTANGAN */
+    function renderEditObstacleList() {
+      const list = document.getElementById('obstacle-edit-list');
+      list.innerHTML = '';
+
+      obstacles.forEach((obs, index) => {
+        const item = document.createElement('div');
+        item.className = 'bg-slate-800/80 p-3.5 rounded-xl border border-slate-700 flex flex-col md:flex-row items-center gap-3';
+
+        item.innerHTML = `
+          <div class="flex items-center gap-2">
+            <span class="font-ninja text-orange-400 text-base">#${index+1}</span>
+            <img src="${obs.gif}" alt="${obs.name}" id="preview-obs-${obs.id}" class="w-14 h-14 object-contain bg-black/50 rounded-lg border border-slate-600 p-1" />
+          </div>
+
+          <div class="flex-1 grid grid-cols-1 sm:grid-cols-2 gap-2 w-full">
+            <div>
+              <label class="text-[10px] text-slate-400 uppercase font-hud block">Nama Rintangan</label>
+              <input type="text" value="${obs.name}" onchange="updateObstacleField('${obs.id}', 'name', this.value)" class="w-full bg-slate-900 border border-slate-700 rounded px-2.5 py-1 text-slate-100 font-hud text-xs focus:ring-1 focus:ring-orange-400 focus:outline-none" />
+            </div>
+            <div>
+              <label class="text-[10px] text-slate-400 uppercase font-hud block">Durasi Hambat (Milidetik)</label>
+              <input type="number" step="100" min="500" max="2500" value="${obs.delay}" onchange="updateObstacleField('${obs.id}', 'delay', parseInt(this.value))" class="w-full bg-slate-900 border border-slate-700 rounded px-2.5 py-1 text-slate-300 font-hud text-xs focus:ring-1 focus:ring-orange-400 focus:outline-none" />
+            </div>
+          </div>
+
+          <div class="w-full md:w-64 flex flex-col gap-1">
+            <label class="text-[10px] text-slate-400 uppercase font-hud">Ganti Animasi GIF (URL / Upload)</label>
+            <input type="text" value="${obs.gif}" placeholder="Tempel URL Animasi GIF" onchange="updateObstacleField('${obs.id}', 'gif', this.value)" class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-0.5 text-[11px] text-slate-300 focus:outline-none" />
+            <input type="file" accept="image/*" onchange="handleObstacleUpload('${obs.id}', this)" class="text-[10px] text-slate-400 file:mr-2 file:py-0.5 file:px-2 file:rounded file:border-0 file:text-[10px] file:bg-slate-700 file:text-slate-200 hover:file:bg-slate-600 cursor-pointer" />
+          </div>
+        `;
+        list.appendChild(item);
+      });
+    }
+
+    function updateObstacleField(id, field, value) {
+      const idx = obstacles.findIndex(x => x.id === id);
+      if (idx !== -1) {
+        obstacles[idx][field] = value;
+        saveObstacles();
+
+        if (field === 'gif') {
+          const prev = document.getElementById(`preview-obs-${id}`);
+          if (prev) prev.src = value;
+        }
+
+        if (!isRacing) renderTrackLanes();
+      }
+    }
+
+    function handleObstacleUpload(id, input) {
+      if (input.files && input.files[0]) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+          updateObstacleField(id, 'gif', e.target.result);
+          renderEditObstacleList();
+        };
+        reader.readAsDataURL(input.files[0]);
+      }
+    }
+
+    async function resetObstaclesToDefault() {
+      if (!confirm('Kembalikan ke rintangan bawaan Lapangan Gebyok?')) return;
+      obstacles = JSON.parse(JSON.stringify(DEFAULT_OBSTACLES));
+      await saveObstacles();
+      renderEditObstacleList();
+      renderTrackLanes();
+    }
+
+    /* MODAL EDIT DESA */
+    function renderEditVillageList() {
+      const list = document.getElementById('village-edit-list');
+      list.innerHTML = '';
+
+      villages.forEach((v, index) => {
+        const item = document.createElement('div');
+        item.className = 'bg-slate-800/70 p-3 rounded-xl border border-slate-700/80 flex flex-col md:flex-row items-center gap-3';
+
+        item.innerHTML = `
+          <div class="flex items-center gap-2 w-full md:w-auto">
+            <span class="font-ninja text-amber-400 text-base">#${index+1}</span>
+            <img src="${v.gif}" alt="${v.name}" id="preview-${v.id}" class="w-12 h-12 object-contain bg-black/40 rounded border border-slate-600 p-0.5" />
+          </div>
+
+          <div class="flex-1 grid grid-cols-1 sm:grid-cols-2 gap-2 w-full">
+            <div>
+              <label class="text-[10px] text-slate-400 uppercase font-hud block">Nama Desa / Kelurahan</label>
+              <input type="text" value="${v.name}" onchange="updateVillageField('${v.id}', 'name', this.value)" class="w-full bg-slate-900 border border-slate-700 rounded px-2.5 py-1 text-slate-100 font-hud text-xs focus:ring-1 focus:ring-amber-400 focus:outline-none" />
+            </div>
+            <div>
+              <label class="text-[10px] text-slate-400 uppercase font-hud block">Nama Karakter Ninja</label>
+              <input type="text" value="${v.ninja}" onchange="updateVillageField('${v.id}', 'ninja', this.value)" class="w-full bg-slate-900 border border-slate-700 rounded px-2.5 py-1 text-slate-300 font-hud text-xs focus:ring-1 focus:ring-amber-400 focus:outline-none" />
+            </div>
+          </div>
+
+          <div class="w-full md:w-60 flex flex-col gap-1">
+            <label class="text-[10px] text-slate-400 uppercase font-hud">Ganti GIF (URL / Upload)</label>
+            <input type="text" value="${v.gif}" placeholder="Tempel URL Animasi GIF" onchange="updateVillageField('${v.id}', 'gif', this.value)" class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-0.5 text-[11px] text-slate-300 focus:outline-none" />
+            <input type="file" accept="image/*" onchange="handleFileUpload('${v.id}', this)" class="text-[10px] text-slate-400 file:mr-2 file:py-0.5 file:px-2 file:rounded file:border-0 file:text-[10px] file:bg-slate-700 file:text-slate-200 hover:file:bg-slate-600 cursor-pointer" />
+          </div>
+        `;
+        list.appendChild(item);
+      });
+    }
+
+    function updateVillageField(id, field, value) {
+      const idx = villages.findIndex(x => x.id === id);
+      if (idx !== -1) {
+        villages[idx][field] = value;
+        saveVillages();
+
+        if (field === 'gif') {
+          const prev = document.getElementById(`preview-${id}`);
+          if (prev) prev.src = value;
+        }
+
+        if (!isRacing) {
+          const actIdx = activeParticipants.findIndex(x => x.id === id);
+          if (actIdx !== -1) activeParticipants[actIdx][field] = value;
+          renderTrackLanes();
+        }
+      }
+    }
+
+    function handleFileUpload(id, input) {
+      if (input.files && input.files[0]) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+          updateVillageField(id, 'gif', e.target.result);
+          renderEditVillageList();
+        };
+        reader.readAsDataURL(input.files[0]);
+      }
+    }
+
+    async function resetVillagesToDefault() {
+      if (!confirm('Kembalikan semua nama desa dan GIF ke setelan awal?')) return;
+      villages = JSON.parse(JSON.stringify(DEFAULT_VILLAGES));
+      await saveVillages();
+      activeParticipants = [...villages];
+      renderEditVillageList();
+      renderTrackLanes();
+    }
+
+    /* AUDIO CONTROLS */
+    function handleBgmToggle(enabled) {
+      isBgmEnabled = enabled;
+      if (!isBgmEnabled) stopBgm();
+      else if (isRacing && !isPaused) startBgm();
+    }
+
+    function handleBgmVolume(val) {
+      bgmVolume = parseFloat(val);
+      document.getElementById('bgm-vol-label').textContent = `${Math.round(bgmVolume * 100)}%`;
+    }
+
+    function handleSfxToggle(enabled) {
+      isSfxEnabled = enabled;
+    }
+
+    function handleSfxVolume(val) {
+      sfxVolume = parseFloat(val);
+      document.getElementById('sfx-vol-label').textContent = `${Math.round(sfxVolume * 100)}%`;
+    }
+
+    function playTestBgm() {
+      initAudio();
+      playTaiko();
+      setTimeout(playTaiko, 140);
+      setTimeout(playTaiko, 280);
+    }
+
+    function playSampleSfx() {
+      initAudio();
+      playSfx('surge');
+    }
+
+    /* REKAP DAFTAR JUARA */
+    function renderHistoryList() {
+      const container = document.getElementById('history-container');
+      if (winnersList.length === 0) {
+        container.innerHTML = '<div class="text-center text-slate-500 py-6">Belum ada pemenang yang terundi.</div>';
+        return;
+      }
+      container.innerHTML = '';
+      winnersList.forEach(w => {
+        const card = document.createElement('div');
+        card.className = 'bg-slate-800/80 p-2.5 rounded-xl border border-slate-700/60 flex items-center justify-between gap-2';
+        card.innerHTML = `
+          <div class="flex items-center gap-2.5">
+            <span class="bg-amber-500 text-slate-950 font-ninja px-2 py-0.5 rounded text-sm font-bold">R${w.round}</span>
+            <div>
+              <div class="font-ninja text-base text-amber-300 leading-tight">${w.village}</div>
+              <div class="text-[10px] text-slate-400">Ninja: ${w.ninja}</div>
+            </div>
+          </div>
+          <div class="text-right">
+            <span class="bg-emerald-950/80 text-emerald-300 border border-emerald-500/30 px-2 py-0.5 rounded text-[11px] font-hud">${w.prize}</span>
+          </div>
+        `;
+        container.appendChild(card);
+      });
+    }
+
+    function copyWinnersText() {
+      if (winnersList.length === 0) {
+        alert('Belum ada data pemenang.');
+        return;
+      }
+      let text = '🏆 HASIL UNDIAN BALAP JUWANGI - LAPANGAN GEBYOK 🏆\n\n';
+      winnersList.forEach(w => {
+        text += `• Ronde ${w.round}: Desa ${w.village} (${w.ninja}) - ${w.prize}\n`;
+      });
+      navigator.clipboard.writeText(text).then(() => {
+        alert('Daftar pemenang berhasil disalin ke clipboard!');
+      });
+    }
+
+    /* MODAL HELPERS */
+    function openModal(id) {
+      document.getElementById(id).classList.remove('hidden');
+      if (id === 'modal-characters') renderEditVillageList();
+      if (id === 'modal-obstacles') renderEditObstacleList();
+      if (id === 'modal-history') renderHistoryList();
+    }
+
+    function closeModal(id) {
+      document.getElementById(id).classList.add('hidden');
+    }
+
+    function toggleFullScreen() {
+      if (!document.fullscreenElement) {
+        document.documentElement.requestFullscreen().catch(() => {});
+      } else {
+        if (document.exitFullscreen) document.exitFullscreen();
+      }
+    }
+
+    window.addEventListener('DOMContentLoaded', () => {
+      loadAllData();
+    });
+  </script>
+</body>
+</html>
